@@ -380,9 +380,12 @@ int main() {
 
 	std::shared_ptr<Network> network = createANN();
 
+	for (int i = 0; i < 10; i++) {
+
+	}
 	while (true) {
 		for (std::shared_ptr<Signal>& _singal : network->m_signals) {
-			float r = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
+			float r = (static_cast <float> (rand()) / static_cast <float> (RAND_MAX)) * 2.0f - 1.0f;
 			_singal->weight = r;
 		}
 
@@ -393,7 +396,6 @@ int main() {
 	}
 
 	while (window.isOpen()) {
-
 		sf::Event event;
 
 		while (window.pollEvent(event)) {
