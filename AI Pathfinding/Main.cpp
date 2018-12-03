@@ -111,8 +111,8 @@ void drawGrid(sf::RenderTarget& target, Map& map, sf::FloatRect _region, std::ve
 	}
 }
 
-struct Node {
-	std::shared_ptr<Node> m_parent = nullptr;
+struct GridNode {
+	std::shared_ptr<GridNode> m_parent = nullptr;
 	float m_cost = 0.0;
 	float m_huristic = 0.0;
 	float m_total = 0.0;
@@ -120,14 +120,14 @@ struct Node {
 };
 
 bool aStar(Map& _map, std::vector<sf::Vector2i>& _output) {
-	std::vector<std::shared_ptr<Node>> openList;
-	std::vector<std::shared_ptr<Node>> closedList;
+	std::vector<std::shared_ptr<GridNode>> openList;
+	std::vector<std::shared_ptr<GridNode>> closedList;
 
 	float initCost = powf((float) abs(_map.m_end.x - _map.m_start.x), 2) + (float)powf(abs(_map.m_end.y - _map.m_start.y), 2);
 
-	openList.push_back(std::shared_ptr<Node>(new Node { nullptr, 0.0, 0.0, 0.0, _map.m_start }));
+	openList.push_back(std::shared_ptr<GridNode>(new GridNode{ nullptr, 0.0, 0.0, 0.0, _map.m_start }));
 
-	std::shared_ptr<Node> currentNode = openList[0];
+	std::shared_ptr<GridNode> currentNode = openList[0];
 
 	int currentNodeIndex = 0;
 
@@ -137,11 +137,11 @@ bool aStar(Map& _map, std::vector<sf::Vector2i>& _output) {
 		//Find the node with the smallest total cost.
 		for (int i = 0; i < openList.size(); i++)
 		{
-			std::shared_ptr<Node> node = openList[i];
+			std::shared_ptr<GridNode> node = openList[i];
 
 			if (node->m_total < currentNode->m_total) {
-currentNodeIndex = i;
-currentNode = node;
+				currentNodeIndex = i;
+				currentNode = node;
 			}
 		}
 
@@ -168,7 +168,12 @@ currentNode = node;
 
 				bool alreadyClosed = false;
 
-				for (std::shared_ptr<Node> closedNode : closedList) {
+				/*for (std::shared_ptr<Node> openNode : openList) {
+					if (openNode->m_position == childPos)
+						alreadyClosed = true;
+				}*/
+
+				for (std::shared_ptr<GridNode> closedNode : closedList) {
 					if (closedNode->m_position == childPos)
 						alreadyClosed = true;
 				}
@@ -177,7 +182,7 @@ currentNode = node;
 					continue;
 
 				bool addNode = true;
-				std::shared_ptr<Node> childNode = std::shared_ptr<Node>(new Node());
+				std::shared_ptr<GridNode> childNode = std::shared_ptr<GridNode>(new GridNode());
 
 				childNode->m_parent = currentNode;
 				//childNode->m_cost = sqrt(powf(fabs(x - currentNode->m_position.x), 2) + powf(fabs(y - currentNode->m_position.y), 2));
@@ -186,10 +191,11 @@ currentNode = node;
 				childNode->m_total = childNode->m_cost + childNode->m_huristic;
 				childNode->m_position = childPos;
 
+				//Change it so it will update the node and not add it.
 				for (int i = 0; i < openList.size(); i++) {
-					std::shared_ptr<Node> openNode = openList[i];
+					std::shared_ptr<GridNode> openNode = openList[i];
 
-					if (openNode->m_position == childNode->m_position) {
+					if (openNode->m_position == childPos) {
 						if (childNode->m_cost > openNode->m_cost) {
 							addNode = false;
 						}
@@ -220,15 +226,171 @@ currentNode = node;
 	}
 }
 
+float sigmoid(float x) {
+	return x / (1 + abs(x));
+}
+struct Neuron;
+
+struct Signal {
+	std::shared_ptr<Neuron> emitter;
+	std::shared_ptr<Neuron> reciever;
+	float weight = 0.0f;
+};
+
+struct Neuron {
+	std::vector<std::shared_ptr<Signal>> m_inSignals;
+	//std::vector<std::shared_ptr<Signal>> m_outSignals;
+	float m_value;
+};
+
+struct Network {
+	//This is a vector (neural network) of vectors (layers) of shared neurons (Ordered neuron)
+	std::vector<std::vector<std::shared_ptr<Neuron>>> m_network;
+	std::vector<std::shared_ptr<Signal>> m_signals;
+};
+
+std::shared_ptr<Network> createANN() {
+	std::shared_ptr<Network> network = std::shared_ptr<Network>(new Network());
+
+	auto pair = [&network](std::shared_ptr<Neuron> _neuronA, std::shared_ptr<Neuron> _neuronB) {
+		std::shared_ptr<Signal> signal = std::shared_ptr<Signal>(new Signal());
+
+		signal->emitter = _neuronA;
+		signal->reciever = _neuronB;
+		network->m_signals.push_back(signal);
+		_neuronB->m_inSignals.push_back(signal);
+
+		return false;
+	};
+
+	std::vector<std::shared_ptr<Neuron>> inputNeurons;
+	inputNeurons.push_back(std::shared_ptr<Neuron>(new Neuron()));
+	inputNeurons.push_back(std::shared_ptr<Neuron>(new Neuron()));
+
+	std::vector<std::shared_ptr<Neuron>> hiddenLayer;
+	hiddenLayer.push_back(std::shared_ptr<Neuron>(new Neuron()));
+	hiddenLayer.push_back(std::shared_ptr<Neuron>(new Neuron()));
+	hiddenLayer.push_back(std::shared_ptr<Neuron>(new Neuron()));
+	hiddenLayer.push_back(std::shared_ptr<Neuron>(new Neuron()));
+
+	std::vector<std::shared_ptr<Neuron>> outputNeurons;
+	outputNeurons.push_back(std::shared_ptr<Neuron>(new Neuron()));
+	outputNeurons.push_back(std::shared_ptr<Neuron>(new Neuron()));
+	outputNeurons.push_back(std::shared_ptr<Neuron>(new Neuron()));
+	outputNeurons.push_back(std::shared_ptr<Neuron>(new Neuron()));
+
+	network->m_network.push_back(inputNeurons);
+	network->m_network.push_back(hiddenLayer);
+	network->m_network.push_back(outputNeurons);
+
+	//Pair all the nodes with each other.
+	for (int layerIndex = 0; layerIndex < network->m_network.size() - 1; layerIndex++) {
+		std::vector<std::shared_ptr<Neuron>>& layer = network->m_network[layerIndex];
+		std::vector<std::shared_ptr<Neuron>>& nextLayer = network->m_network[layerIndex + 1];
+
+		for (int neuronIndex = 0; neuronIndex < layer.size(); neuronIndex++)
+		{
+			std::shared_ptr<Neuron> neuron = layer[neuronIndex];
+
+			for (int nextNeuronIndex = 0; nextNeuronIndex < nextLayer.size(); nextNeuronIndex++)
+			{
+				std::shared_ptr<Neuron> nextNeuron = nextLayer[nextNeuronIndex];
+
+				pair(neuron, nextNeuron);
+
+				std::cout << "Paired Node " << layerIndex << ", " << neuronIndex << " with " << (layerIndex + 1) << ", " << nextNeuronIndex << std::endl;
+			}
+		}
+	}
+
+	return network;
+}
+
+void run(std::shared_ptr<Network> network) {
+
+	for (int index = 1; index < network->m_network.size(); index++) {
+		for (std::shared_ptr<Neuron>& neuron : network->m_network[index]) {
+			float currentValue = 0.0f;
+
+			for (std::shared_ptr<Signal>& signal : neuron->m_inSignals) {
+				currentValue += signal->emitter->m_value * signal->weight;
+			}
+
+			currentValue = sigmoid(currentValue);
+			neuron->m_value = currentValue;
+		}
+	}
+
+	/*for (std::shared_ptr<Neuron>& neuron : network->m_network[network->m_network.size() - 1]) {
+		std::cout << neuron->m_value << std::endl;
+	}*/
+}
+
+#define MAX_ITERATIONS 1000
+
+bool positive(float value) {
+	return value > 0.0f;
+}
+
+float fitness(Map& _map, std::shared_ptr<Network> _network)  {
+	float fitness = 0.0f;
+	bool reachedTarget = false;
+
+	int iterations = 0;
+
+	sf::Vector2i currentPos = _map.m_start;
+
+	while (!reachedTarget && iterations != MAX_ITERATIONS) {
+		//Update the relative position in the neural network.
+		_network->m_network[0][0]->m_value = static_cast<float>(currentPos.x - _map.m_end.x);
+		_network->m_network[0][1]->m_value = static_cast<float>(currentPos.y - _map.m_end.y);
+
+		run(_network);
+
+		bool up = positive(_network->m_network[2][0]->m_value);
+		bool down = positive(_network->m_network[2][1]->m_value);
+		bool left = positive(_network->m_network[2][2]->m_value);
+		bool right = positive(_network->m_network[2][3]->m_value);
+
+		if (up) currentPos.y--;
+		else if (down) currentPos.y++;
+		if (left) currentPos.x--;
+		else if (right) currentPos.x++;
+
+		reachedTarget = currentPos == _map.m_end;
+
+		fitness++;
+		iterations++;
+	}
+
+	return fitness;
+}
+
+
 int main() {
 	sf::RenderWindow window(sf::VideoMode(640, 480), "AI Pathfinding");
 
+	srand(time(NULL));
 
 	Map map;
 	std::vector<sf::Vector2i> path;
 
-	loadMap("File3.txt", map);
+	loadMap("File5.txt", map);
 	aStar(map, path);
+
+	std::shared_ptr<Network> network = createANN();
+
+	while (true) {
+		for (std::shared_ptr<Signal>& _singal : network->m_signals) {
+			float r = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
+			_singal->weight = r;
+		}
+
+		float f = fitness(map, network);
+
+		if (f < 1000.0f)
+			std::cout << "Found Goal" << std::endl;
+	}
 
 	while (window.isOpen()) {
 
@@ -262,9 +424,6 @@ int main() {
 		}
 
 		window.clear();
-
-
-
 
 		sf::Vector2u size = window.getSize();
 		window.setView(sf::View(sf::Vector2f(size.x / 2, size.y / 2), sf::Vector2f(size.x, size.y)));
