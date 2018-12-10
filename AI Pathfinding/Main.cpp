@@ -249,6 +249,21 @@ struct Network {
 	std::vector<std::shared_ptr<Signal>> m_signals;
 };
 
+std::vector<float> NetworkToChromosome(std::shared_ptr<Network>& _network) {
+	std::vector<float> chromosome;
+
+	for(std::shared_ptr<Signal>& signal : _network->m_signals)
+		chromosome.push_back(signal->weight);
+
+	return chromosome;
+}
+
+void ChromosomeToNetwork(std::shared_ptr<Network>& _network, std::vector<float> _chromosome) {
+	for (int i = 0; i < _chromosome.size(); i++) {
+		_network->m_signals[i]->weight = _chromosome[i];
+	}
+}
+
 std::shared_ptr<Network> createANN() {
 	std::shared_ptr<Network> network = std::shared_ptr<Network>(new Network());
 
@@ -266,12 +281,30 @@ std::shared_ptr<Network> createANN() {
 	std::vector<std::shared_ptr<Neuron>> inputNeurons;
 	inputNeurons.push_back(std::shared_ptr<Neuron>(new Neuron()));
 	inputNeurons.push_back(std::shared_ptr<Neuron>(new Neuron()));
+	inputNeurons.push_back(std::shared_ptr<Neuron>(new Neuron()));
+	inputNeurons.push_back(std::shared_ptr<Neuron>(new Neuron()));
+	inputNeurons.push_back(std::shared_ptr<Neuron>(new Neuron()));
+	inputNeurons.push_back(std::shared_ptr<Neuron>(new Neuron()));
 
 	std::vector<std::shared_ptr<Neuron>> hiddenLayer;
 	hiddenLayer.push_back(std::shared_ptr<Neuron>(new Neuron()));
 	hiddenLayer.push_back(std::shared_ptr<Neuron>(new Neuron()));
 	hiddenLayer.push_back(std::shared_ptr<Neuron>(new Neuron()));
 	hiddenLayer.push_back(std::shared_ptr<Neuron>(new Neuron()));
+
+	std::vector<std::shared_ptr<Neuron>> hiddenLayer2;
+	hiddenLayer2.push_back(std::shared_ptr<Neuron>(new Neuron()));
+	hiddenLayer2.push_back(std::shared_ptr<Neuron>(new Neuron()));
+	hiddenLayer2.push_back(std::shared_ptr<Neuron>(new Neuron()));
+	hiddenLayer2.push_back(std::shared_ptr<Neuron>(new Neuron()));
+	hiddenLayer2.push_back(std::shared_ptr<Neuron>(new Neuron()));
+	hiddenLayer2.push_back(std::shared_ptr<Neuron>(new Neuron()));
+
+	std::vector<std::shared_ptr<Neuron>> hiddenLayer3;
+	hiddenLayer3.push_back(std::shared_ptr<Neuron>(new Neuron()));
+	hiddenLayer3.push_back(std::shared_ptr<Neuron>(new Neuron()));
+	hiddenLayer3.push_back(std::shared_ptr<Neuron>(new Neuron()));
+	hiddenLayer3.push_back(std::shared_ptr<Neuron>(new Neuron()));
 
 	std::vector<std::shared_ptr<Neuron>> outputNeurons;
 	outputNeurons.push_back(std::shared_ptr<Neuron>(new Neuron()));
@@ -281,6 +314,8 @@ std::shared_ptr<Network> createANN() {
 
 	network->m_network.push_back(inputNeurons);
 	network->m_network.push_back(hiddenLayer);
+	//network->m_network.push_back(hiddenLayer2);
+	network->m_network.push_back(hiddenLayer3);
 	network->m_network.push_back(outputNeurons);
 
 	//Pair all the nodes with each other.
@@ -332,40 +367,288 @@ bool positive(float value) {
 	return value > 0.0f;
 }
 
-float fitness(Map& _map, std::shared_ptr<Network> _network)  {
+int nextUp(int x, int y, Map& _map) {
+	if (y > 0) {
+		for (int cY = x; cY > 0; cY--) {
+			if (_map.m_mapData[x][cY] == 1)
+				return y - cY;
+		}
+
+		return y;
+	}
+	else {
+		return 1;
+	}
+}
+
+int nextDown(int x, int y, Map& _map) {
+	if (y < _map.m_height - 1) {
+		for (int cY = x; cY < _map.m_height; cY++) {
+			if (_map.m_mapData[x][cY] == 1)
+				return cY - y;
+		}
+
+		return _map.m_height - y;
+	}
+	else {
+		return 1;
+	}
+}
+
+int nextLeft(int x, int y, Map& _map) {
+	if (x > 0) {
+		for (int cX = x; cX > 0; cX--) {
+			if (_map.m_mapData[cX][y] == 1)
+				return x - cX;
+		}
+
+		return x;
+	}
+	else {
+		return 1;
+	}
+}
+
+int nextRight(int x, int y, Map& _map) {
+	if (x < _map.m_width - 1) {
+		for (int cX = x; cX < _map.m_width; cX++) {
+			if (_map.m_mapData[cX][y] == 1)
+				return cX - x;
+		}
+
+		return _map.m_width - x;
+	}
+	else {
+		return 1;
+	}
+}
+
+float length(sf::Vector2f _a) {
+	return sqrtf(_a.x * _a.x + _a.y * _a.y);
+}
+
+float fitness(Map& _map, std::shared_ptr<Network> _network, bool& foundPath)  {
 	float fitness = 0.0f;
 	bool reachedTarget = false;
 
 	int iterations = 0;
 
 	sf::Vector2i currentPos = _map.m_start;
+	float maxFit = (float)(_map.m_width * _map.m_height) * 10.0f;
+	int maxIterations = _map.m_width * _map.m_height;
 
-	while (!reachedTarget && iterations != MAX_ITERATIONS) {
+	while (!reachedTarget && iterations < maxIterations) {
 		//Update the relative position in the neural network.
 		_network->m_network[0][0]->m_value = static_cast<float>(currentPos.x - _map.m_end.x);
 		_network->m_network[0][1]->m_value = static_cast<float>(currentPos.y - _map.m_end.y);
 
+		_network->m_network[0][2]->m_value = nextUp(currentPos.x, currentPos.y, _map);
+		_network->m_network[0][3]->m_value = nextDown(currentPos.x, currentPos.y, _map);
+		_network->m_network[0][4]->m_value = nextLeft(currentPos.x, currentPos.y, _map);
+		_network->m_network[0][5]->m_value = nextRight(currentPos.x, currentPos.y, _map);
+
 		run(_network);
 
-		bool up = positive(_network->m_network[2][0]->m_value);
-		bool down = positive(_network->m_network[2][1]->m_value);
-		bool left = positive(_network->m_network[2][2]->m_value);
-		bool right = positive(_network->m_network[2][3]->m_value);
+		sf::Vector2i lastPos = currentPos;
 
-		if (up) currentPos.y--;
-		else if (down) currentPos.y++;
-		if (left) currentPos.x--;
-		else if (right) currentPos.x++;
+		bool up = positive(_network->m_network[_network->m_network.size() - 1][0]->m_value);
+		bool down = positive(_network->m_network[_network->m_network.size() - 1][1]->m_value);
+		bool left = positive(_network->m_network[_network->m_network.size() - 1][2]->m_value);
+		bool right = positive(_network->m_network[_network->m_network.size() - 1][3]->m_value);
+
+		if (up && currentPos.y > 0 && _map.m_mapData[currentPos.x][currentPos.y - 1] != 1) currentPos.y--;
+		if (down && currentPos.y < _map.m_height - 1 && _map.m_mapData[currentPos.x][currentPos.y + 1] != 1) currentPos.y++;
+		if (left && currentPos.x > 0 && _map.m_mapData[currentPos.x - 1][currentPos.y] != 1) currentPos.x--;
+		if (right && currentPos.x < _map.m_width - 1 && _map.m_mapData[currentPos.x + 1][currentPos.y] != 1) currentPos.x++;
 
 		reachedTarget = currentPos == _map.m_end;
 
 		fitness++;
+
+		float lastLength = length((sf::Vector2f)(lastPos - _map.m_end));
+		float thisLength = length((sf::Vector2f)(currentPos - _map.m_end));
+
+		if (thisLength < lastLength) {
+			fitness--;
+		}
+
 		iterations++;
 	}
+
+	foundPath = reachedTarget;
 
 	return fitness;
 }
 
+float random(float min = 0.0f, float max = 1.0f) {
+	return min + ((static_cast <float> (rand()) / static_cast <float> (RAND_MAX)) * (max - min));
+}
+
+#define POPULATION 20
+#define HALF_POPULATION 10
+
+std::vector<sf::Vector2i> evolve(Map& _map, std::shared_ptr<Network>& _network) {
+	std::vector<std::vector<float>> chromosomes;
+	std::vector<float> fitnesses;
+	float maxFit = (float)(_map.m_width * _map.m_height) * 10.0f;
+
+	//First fill the chromosomes with 4 parents.
+	while (chromosomes.size() < POPULATION) {
+		for (std::shared_ptr<Signal>& _singal : _network->m_signals) {
+			_singal->weight = random(-1, 1);
+		}
+
+		chromosomes.push_back(NetworkToChromosome(_network));
+		//if (fitness(_map, _network) < maxFit)
+	}
+
+	std::vector<float> fittest;
+
+	bool generating = true;
+
+	int generations = 0;
+
+	int maxGenerations = 100000;
+
+	generationLoop:
+	for(int gen = 0; gen < maxGenerations; gen++) {
+		generations++;
+		std::vector<std::vector<float>> children;
+		fitnesses.clear();
+
+		for (int f = 0; f < POPULATION; f++) {
+			ChromosomeToNetwork(_network, chromosomes[f]);
+
+			bool foundPath = false;
+			float fit = fitness(_map, _network, foundPath);
+			fitnesses.push_back(fit);
+
+			if (foundPath) {
+				gen = maxGenerations;
+				fittest = chromosomes[f];
+				goto generationLoop;
+			}
+			/*else {
+				for (int cell = 0; cell < chromosomes[f].size(); cell++) {
+					if (random() < 0.2f) {
+						chromosomes[f][cell] = random(-1.0, 1.0);
+					}
+				}
+			}*/
+		}
+
+		float maxVal = 0.0f;
+
+		for (float f : fitnesses)
+			maxVal += f;
+
+		for (int j = 0; j < HALF_POPULATION; j++) {
+			float r1 = random(0.0f, maxVal);
+			float currentCheck = 0.0f;
+			int index1 = 0;
+
+			for (int f = 0; f < fitnesses.size(); f++) {
+				currentCheck += fitnesses[f];
+
+				if (r1 < currentCheck) {
+					index1 = f;
+					break;
+				}
+			}
+
+			int index2 = index1;
+
+			while (index2 == index1) {
+				r1 = random(0.0f, maxVal);
+				currentCheck = 0.0f;
+
+				for (int f = 0; f < fitnesses.size(); f++) {
+					currentCheck += fitnesses[f];
+
+					if (r1 < currentCheck) {
+						index2 = f;
+						break;
+					}
+				}
+			}
+
+			std::vector<float> chromosomeA = chromosomes[index1];
+			std::vector<float> chromosomeB = chromosomes[index2];
+
+			//int crossOver = (int)floor(chromosomeA.size() * random());
+			int crossOver = chromosomeA.size() / 2 - 1;
+
+			std::vector<float> childA;
+			std::vector<float> childB;
+
+			for (int cell = 0; cell < chromosomeA.size(); cell++) {
+				if (cell > crossOver) {
+					childA.push_back(chromosomeB[cell]);
+					childB.push_back(chromosomeA[cell]);
+				}
+				else {
+					childA.push_back(chromosomeA[cell]);
+					childB.push_back(chromosomeB[cell]);
+				}
+			}
+
+			//Random Mutation
+			for (int cell = 0; cell < childA.size(); cell++) {
+				if (random() < 0.05f) {
+					childA[cell] = random(-1.0f, 1.0f);
+				}
+
+				if (random() < 0.05f) {
+					childB[cell] = random(-1.0f, 1.0f);
+				}
+			}
+
+			children.push_back(childA);
+			children.push_back(childB);
+		}
+
+		chromosomes = children;
+	}
+
+	ChromosomeToNetwork(_network, fittest);
+	
+	std::vector<sf::Vector2i> path;
+
+	bool searching = true;
+	sf::Vector2i currentPos = _map.m_start;
+
+	while (searching) {
+		_network->m_network[0][0]->m_value = static_cast<float>(currentPos.x - _map.m_end.x);
+		_network->m_network[0][1]->m_value = static_cast<float>(currentPos.y - _map.m_end.y);
+
+		_network->m_network[0][2]->m_value = nextUp(currentPos.x, currentPos.y, _map);
+		_network->m_network[0][3]->m_value = nextDown(currentPos.x, currentPos.y, _map);
+		_network->m_network[0][4]->m_value = nextLeft(currentPos.x, currentPos.y, _map);
+		_network->m_network[0][5]->m_value = nextRight(currentPos.x, currentPos.y, _map);
+
+		path.push_back(currentPos);
+
+		run(_network);
+
+		bool up = positive(_network->m_network[_network->m_network.size() - 1][0]->m_value);
+		bool down = positive(_network->m_network[_network->m_network.size() - 1][1]->m_value);
+		bool left = positive(_network->m_network[_network->m_network.size() - 1][2]->m_value);
+		bool right = positive(_network->m_network[_network->m_network.size() - 1][3]->m_value);
+
+		if (up && currentPos.y > 0 && _map.m_mapData[currentPos.x][currentPos.y - 1] != 1) currentPos.y--;
+		if (down && currentPos.y < _map.m_height - 1 && _map.m_mapData[currentPos.x][currentPos.y + 1] != 1) currentPos.y++;
+		if (left && currentPos.x > 0 && _map.m_mapData[currentPos.x - 1][currentPos.y] != 1) currentPos.x--;
+		if (right && currentPos.x < _map.m_width - 1 && _map.m_mapData[currentPos.x + 1][currentPos.y] != 1) currentPos.x++;
+
+		if (currentPos == _map.m_end)
+			searching = false;
+	}
+
+
+	path.push_back(currentPos);
+
+	return path;
+}
 
 int main() {
 	sf::RenderWindow window(sf::VideoMode(640, 480), "AI Pathfinding");
@@ -375,25 +658,12 @@ int main() {
 	Map map;
 	std::vector<sf::Vector2i> path;
 
-	loadMap("File5.txt", map);
-	aStar(map, path);
+	loadMap("File8.txt", map);
+	//aStar(map, path);
 
 	std::shared_ptr<Network> network = createANN();
+	path = evolve(map, network);
 
-	for (int i = 0; i < 10; i++) {
-
-	}
-	while (true) {
-		for (std::shared_ptr<Signal>& _singal : network->m_signals) {
-			float r = (static_cast <float> (rand()) / static_cast <float> (RAND_MAX)) * 2.0f - 1.0f;
-			_singal->weight = r;
-		}
-
-		float f = fitness(map, network);
-
-		if (f < 1000.0f)
-			std::cout << "Found Goal" << std::endl;
-	}
 
 	while (window.isOpen()) {
 		sf::Event event;
