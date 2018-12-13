@@ -11,6 +11,8 @@ private:
 	std::vector<std::vector<float>> m_nodes;
 	//A 1D array of signals matching all the weights between the nodes.
 	std::vector<float> m_signals;
+
+	std::vector<float> m_biases;
 public:
 	//Creates a Neural Network with all the nodes and signals connected.
 	//Signals are a 1D array for the purposes of a chromosome.

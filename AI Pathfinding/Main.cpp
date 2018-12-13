@@ -150,7 +150,7 @@ std::shared_ptr<Network> createANN() {
 #define MAX_ITERATIONS 1000
 
 bool positive(float value) {
-	return value > 0.0f;
+	return value > 0.5f;
 }
 
 int nextUp(int x, int y, Map& _map) {
@@ -268,6 +268,9 @@ float fitness(Map& _map, NeuralNetwork& _network, bool& foundPath, std::vector<s
 				path.push_back(currentPos);
 			}
 		}
+		else if(lastPos == currentPos) {
+			fitness -= 0.1f;
+		}
 
 		iterations++;
 
@@ -301,7 +304,7 @@ std::vector<sf::Vector2i> evolve(Map& _map, NeuralNetwork& _network) {
 		std::vector<float> rand;
 
 		for (int i = 0; i < _network.getSignalCount(); i++)
-			rand.push_back(random(-1, 1));
+			rand.push_back(random(-5.0f, 5.0f));
 
 		chromosomes.push_back(rand);
 	}
@@ -365,7 +368,7 @@ std::vector<sf::Vector2i> evolve(Map& _map, NeuralNetwork& _network) {
 
 			int index2 = index1;
 
-			//while (index2 == index1) {
+			while (index2 == index1) {
 				r1 = random(0.0f, maxVal);
 				currentCheck = 0.0f;
 
@@ -377,7 +380,7 @@ std::vector<sf::Vector2i> evolve(Map& _map, NeuralNetwork& _network) {
 						break;
 					}
 				}
-			//}
+			}
 
 			std::vector<float> chromosomeA = chromosomes[index1];
 			std::vector<float> chromosomeB = chromosomes[index2];
@@ -395,8 +398,8 @@ std::vector<sf::Vector2i> evolve(Map& _map, NeuralNetwork& _network) {
 
 				//Random Mutation
 				for (int cell = 0; cell < childA.size(); cell++) {
-					if (random() < 0.05f) {
-						childA[cell] = random(-1.0f, 1.0f);
+					if (random() < 0.015f) {
+						childA[cell] = random(-5.0f, 5.0f);
 					}
 				}
 			}
@@ -411,8 +414,8 @@ std::vector<sf::Vector2i> evolve(Map& _map, NeuralNetwork& _network) {
 
 				//Random Mutation
 				for (int cell = 0; cell < childA.size(); cell++) {
-					if (random() < 0.05f) {
-						childB[cell] = random(-1.0f, 1.0f);
+					if (random() < 0.015f) {
+						childB[cell] = random(-5.0f, 5.0f);
 					}
 				}
 			}
@@ -443,29 +446,11 @@ int main() {
 
 	sf::RenderWindow window(sf::VideoMode(640, 480), "AI Pathfinding");
 
-	NeuralNetwork network({ 6, 4, 4 });
-	Map map("File12.txt");
+	NeuralNetwork network({ 6, 6, 4 });
+	Map map("File13.txt");
 	std::vector<sf::Vector2i> path = map.getPath();
 
 	path = evolve(map, network);
-
-	/*dummyInputs = std::vector<float>(4 + map.getWidth() * map.getHeight());
-
-	for (int y = 0; y < map.getHeight(); y++) {
-		for (int x = 0; x < map.getWidth(); x++) {
-			dummyInputs[4 + (y * map.getWidth()) + x] = map[x][y];
-		}
-	}
-
-	dummyInputs[4 + (map.getStart().y * map.getWidth()) + map.getStart().x] = 0;
-	dummyInputs[4 + (map.getEnd().y * map.getWidth()) + map.getEnd().x] = 0;
-
-	NeuralNetwork network({ (int)dummyInputs.size(), (int)(dummyInputs.size() + 4) / 2, 4 });
-	path = evolve(map, network);*/
-	//aStar(map, path);
-
-
-
 
 	while (window.isOpen()) {
 		sf::Event event;
@@ -492,6 +477,9 @@ int main() {
 						map = Map(filename);
 						path = map.getPath();
 					}
+				}
+				else if (event.key.code == sf::Keyboard::F2) {
+
 				}
 			}
 		}

@@ -1,5 +1,8 @@
 #include "NeuralNetwork.h"
 
+float random2(float min = 0.0f, float max = 1.0f) {
+	return min + ((static_cast <float> (rand()) / static_cast <float> (RAND_MAX)) * (max - min));
+}
 NeuralNetwork::NeuralNetwork(std::vector<int> _layerSizes) {
 	//Cannot create a network with only 1 layer
 	if (_layerSizes.size() <= 1) {
@@ -24,8 +27,20 @@ NeuralNetwork::NeuralNetwork(std::vector<int> _layerSizes) {
 		m_nodes.push_back(std::vector<float>(layerSize));
 	}
 
+	int totalNodes = 0;
+
+	for (int& i : _layerSizes)
+		totalNodes += i;
+
+	m_biases = std::vector<float>(totalNodes);
+
+	for (float& bias : m_biases) {
+		bias = random2(-2.5, 2.5);
+	}
+
 	//Initalise the signals
 	m_signals = std::vector<float>(signalCount);
+
 }
 
 std::vector<float> NeuralNetwork::run(std::vector<float> _inputNodes) {
@@ -35,10 +50,15 @@ std::vector<float> NeuralNetwork::run(std::vector<float> _inputNodes) {
 	//Set the input node data.
 	m_nodes[0] = _inputNodes;
 
+	int biasOffset = 0;
+
 	//Start at 1 because the input layer does not use the activation function.
 	for (int i = 1; i < m_nodes.size(); i++) {
 		std::vector<float>& prevLayer = m_nodes[i - 1];
 		std::vector<float>& layer = m_nodes[i];
+
+		for (float& val : layer)
+			val = 0.0f;
 
 		//Add all the weighted values.
 		//Iterate over all the current layer and then add the weighted value to every
@@ -50,7 +70,7 @@ std::vector<float> NeuralNetwork::run(std::vector<float> _inputNodes) {
 				int signalIndex = (prevNodeIndex * layer.size()) + nodeIndex;
 
 				//Multiply the previous layers output value with the current signal.
-				layer[nodeIndex] = prevLayer[prevNodeIndex] * m_signals[signalIndex + signalOffset];
+				layer[nodeIndex] += prevLayer[prevNodeIndex] * m_signals[signalIndex + signalOffset];
 			}
 		}
 
@@ -58,9 +78,12 @@ std::vector<float> NeuralNetwork::run(std::vector<float> _inputNodes) {
 		for (int nodeIndex = 0; nodeIndex < layer.size(); nodeIndex++) {
 			float& node = layer[nodeIndex];
 			//Sigmoid function between 
-			node = node / (1.0f + abs(node));
+			node = 1.0f / (1.0f + exp(-node + m_biases[biasOffset + nodeIndex]));
+			//node = node / (1.0f + abs(node));
 			//node = sin(node);
 		}
+
+		biasOffset += layer.size();
 
 		//Add the signal offset.
 		//This would be much better if I used a matrix here as I can quickly multiply all
