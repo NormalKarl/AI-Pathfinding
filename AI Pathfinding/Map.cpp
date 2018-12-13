@@ -1,6 +1,7 @@
 #include "Map.h"
 
 #include <fstream>
+#include <memory>
 
 Map::Map(const char* _path)
 {

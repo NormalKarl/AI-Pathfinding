@@ -10,62 +10,7 @@
 #include "NeuralNetwork.h"
 #include "Map.h"
 
-
-void drawGrid(sf::RenderTarget& target, Map& map, sf::FloatRect _region, std::vector<sf::Vector2i> _path) {
-	float cellWidth = _region.width / (float)map.getWidth();
-	float cellHeight = _region.height / (float)map.getHeight();
-
-	for (int x = 0; x < map.getWidth(); x++) {
-		for (int y = 0; y < map.getHeight(); y++) {
-			sf::RectangleShape shape;
-			shape.setSize(sf::Vector2f(cellWidth, cellHeight));
-			shape.setPosition(sf::Vector2f(_region.left + (float)x * cellWidth, _region.top + (float)y * cellHeight));
-
-			switch (map[x][y]) {
-				case 0:
-					shape.setFillColor(sf::Color(150, 150, 150, 255));
-					break;
-				case 1:
-					shape.setFillColor(sf::Color::Black);
-					break;
-				case 2:
-					shape.setFillColor(sf::Color::Red);
-					break;
-				case 3:
-					shape.setFillColor(sf::Color::Green);
-					break;
-			}
-
-			target.draw(shape);
-		}
-	}
-
-	for (int x = 0; x <= map.getWidth(); x++) {
-		sf::Vertex v[] = {
-			sf::Vertex({_region.left + x * cellWidth, _region.top}),
-			sf::Vertex({_region.left + x * cellWidth, _region.top + _region.height})
-		};
-
-		target.draw(v, 2, sf::PrimitiveType::Lines);
-	}
-
-	for (int y = 0; y <= map.getHeight(); y++) {
-		sf::Vertex v[] = {
-			sf::Vertex({_region.left, _region.top + y * cellHeight}),
-			sf::Vertex({_region.left + _region.width, _region.top + y * cellHeight})
-		};
-
-		target.draw(v, 2, sf::PrimitiveType::Lines);
-	}
-
-	for (sf::Vector2i node : _path) {
-		sf::RectangleShape shape;
-		shape.setSize(sf::Vector2f(cellWidth, cellHeight));
-		shape.setPosition(sf::Vector2f(_region.left + (float)node.x * cellWidth, _region.top + (float)node.y * cellHeight));
-		shape.setFillColor(sf::Color(0, 0, 255, 100));
-		target.draw(shape);
-	}
-}
+void drawGrid(sf::RenderTarget& target, Map& map, sf::FloatRect _region, std::vector<sf::Vector2i> _path);
 
 /*float sigmoid(float x) {
 	return x / (1 + abs(x));
@@ -268,8 +213,6 @@ float length(sf::Vector2f _a) {
 	return sqrtf(_a.x * _a.x + _a.y * _a.y);
 }
 
-std::vector<float> dummyInputs;
-
 float fitness(Map& _map, NeuralNetwork& _network, bool& foundPath, std::vector<sf::Vector2i>* _outputPath = nullptr)  {
 	float fitness = 1.0f;
 	foundPath = false;
@@ -284,19 +227,14 @@ float fitness(Map& _map, NeuralNetwork& _network, bool& foundPath, std::vector<s
 
 	while (!foundPath && iterations < maxIterations) {
 		//Update the relative position in the neural network.
-		/*float dx = static_cast<float>(currentPos.x - _map.getEnd().x);
+		float dx = static_cast<float>(currentPos.x - _map.getEnd().x);
 		float dy = static_cast<float>(currentPos.y - _map.getEnd().y);
 		float dup = nextUp(currentPos.x, currentPos.y, _map);
 		float ddown = nextDown(currentPos.x, currentPos.y, _map);
 		float dleft = nextLeft(currentPos.x, currentPos.y, _map);
-		float dright = nextRight(currentPos.x, currentPos.y, _map);*/
+		float dright = nextRight(currentPos.x, currentPos.y, _map);
 
-		dummyInputs[0] = (float)currentPos.x;
-		dummyInputs[1] = (float)currentPos.y;
-		dummyInputs[2] = (float)_map.getEnd().x;
-		dummyInputs[3] = (float)_map.getEnd().y;
-
-		std::vector<float> results = _network.run(dummyInputs);
+		std::vector<float> results = _network.run({ dx, dy, dup, ddown, dleft, dright });
 
 		bool up = positive(results[0]);
 		bool down = positive(results[1]);
@@ -312,15 +250,23 @@ float fitness(Map& _map, NeuralNetwork& _network, bool& foundPath, std::vector<s
 		sf::Vector2i lastLastPos = path.size() >= 3 ? path[path.size() - 3] : path.size() >= 2 ? path[path.size() - 2] : path[path.size() - 1];
 		sf::Vector2i lastPos = path.size() >= 2 ? path[path.size() - 2] : path[path.size() - 1];
 
-		if (lastPos != currentPos) {
-			fitness++;
-			path.push_back(currentPos);
+		bool containsNode = false;
+
+		for (sf::Vector2i pathNode : path) {
+			if (pathNode == currentPos) {
+				containsNode = true;
+			}
 		}
 
-		if (lastPos != currentPos && currentPos == lastLastPos) {
-			fitness--;
-			path.pop_back();
-			path.pop_back();
+		if (!containsNode && lastPos != currentPos) {
+			if (currentPos == lastLastPos) {
+				fitness -= 1.0f;
+				path.pop_back();
+			}
+			else {
+				fitness += 1.0f;
+				path.push_back(currentPos);
+			}
 		}
 
 		iterations++;
@@ -329,27 +275,22 @@ float fitness(Map& _map, NeuralNetwork& _network, bool& foundPath, std::vector<s
 			foundPath = true;
 			break;
 		}
+
 	}
-
-	//sf::Vector2f finalOffset = (sf::Vector2f)(currentPos - _map.getEnd());
-
-	//fitness -= fabs(sqrt(finalOffset.x * finalOffset.x + finalOffset.y * finalOffset.y));
-
-	//fitness = fitness < 0 ? 0 : fitness;
 
 	if (foundPath && _outputPath != nullptr) {
 		*_outputPath = path;
 	}
 
-	return fitness;
+	return fitness < 0.0f ? 0.0f : fitness;
 }
 
 float random(float min = 0.0f, float max = 1.0f) {
 	return min + ((static_cast <float> (rand()) / static_cast <float> (RAND_MAX)) * (max - min));
 }
 
-#define POPULATION 50
-#define HALF_POPULATION 25
+#define POPULATION 20
+#define HALF_POPULATION 10
 
 std::vector<sf::Vector2i> evolve(Map& _map, NeuralNetwork& _network) {
 	std::vector<std::vector<float>> chromosomes;
@@ -424,7 +365,7 @@ std::vector<sf::Vector2i> evolve(Map& _map, NeuralNetwork& _network) {
 
 			int index2 = index1;
 
-			while (index2 == index1) {
+			//while (index2 == index1) {
 				r1 = random(0.0f, maxVal);
 				currentCheck = 0.0f;
 
@@ -436,13 +377,13 @@ std::vector<sf::Vector2i> evolve(Map& _map, NeuralNetwork& _network) {
 						break;
 					}
 				}
-			}
+			//}
 
 			std::vector<float> chromosomeA = chromosomes[index1];
 			std::vector<float> chromosomeB = chromosomes[index2];
 
-			int crossOver = (int)floor(chromosomeA.size() * random());
-			//int crossOver = chromosomeA.size() / 2 - 1;
+			//int crossOver = (int)floor(chromosomeA.size() * random());
+			int crossOver = chromosomeA.size() / 2 - 1;
 
 			std::vector<float> childA;
 			std::vector<float> childB;
@@ -498,12 +439,15 @@ std::vector<sf::Vector2i> evolve(Map& _map, NeuralNetwork& _network) {
 }
 
 int main() {
-	sf::RenderWindow window(sf::VideoMode(640, 480), "AI Pathfinding");
-
 	srand(time(NULL));
 
-	Map map("File11.txt");
+	sf::RenderWindow window(sf::VideoMode(640, 480), "AI Pathfinding");
+
+	NeuralNetwork network({ 6, 4, 4 });
+	Map map("File12.txt");
 	std::vector<sf::Vector2i> path = map.getPath();
+
+	path = evolve(map, network);
 
 	/*dummyInputs = std::vector<float>(4 + map.getWidth() * map.getHeight());
 
@@ -519,6 +463,9 @@ int main() {
 	NeuralNetwork network({ (int)dummyInputs.size(), (int)(dummyInputs.size() + 4) / 2, 4 });
 	path = evolve(map, network);*/
 	//aStar(map, path);
+
+
+
 
 	while (window.isOpen()) {
 		sf::Event event;
@@ -590,5 +537,61 @@ int main() {
 		drawGrid(window, map, region, path);
 
 		window.display();
+	}
+}
+
+void drawGrid(sf::RenderTarget& target, Map& map, sf::FloatRect _region, std::vector<sf::Vector2i> _path) {
+	float cellWidth = _region.width / (float)map.getWidth();
+	float cellHeight = _region.height / (float)map.getHeight();
+
+	for (int x = 0; x < map.getWidth(); x++) {
+		for (int y = 0; y < map.getHeight(); y++) {
+			sf::RectangleShape shape;
+			shape.setSize(sf::Vector2f(cellWidth, cellHeight));
+			shape.setPosition(sf::Vector2f(_region.left + (float)x * cellWidth, _region.top + (float)y * cellHeight));
+
+			switch (map[x][y]) {
+			case 0:
+				shape.setFillColor(sf::Color(150, 150, 150, 255));
+				break;
+			case 1:
+				shape.setFillColor(sf::Color::Black);
+				break;
+			case 2:
+				shape.setFillColor(sf::Color::Red);
+				break;
+			case 3:
+				shape.setFillColor(sf::Color::Green);
+				break;
+			}
+
+			target.draw(shape);
+		}
+	}
+
+	for (int x = 0; x <= map.getWidth(); x++) {
+		sf::Vertex v[] = {
+			sf::Vertex({ _region.left + x * cellWidth, _region.top }),
+			sf::Vertex({ _region.left + x * cellWidth, _region.top + _region.height })
+		};
+
+		target.draw(v, 2, sf::PrimitiveType::Lines);
+	}
+
+	for (int y = 0; y <= map.getHeight(); y++) {
+		sf::Vertex v[] = {
+			sf::Vertex({ _region.left, _region.top + y * cellHeight }),
+			sf::Vertex({ _region.left + _region.width, _region.top + y * cellHeight })
+		};
+
+		target.draw(v, 2, sf::PrimitiveType::Lines);
+	}
+
+	for (sf::Vector2i node : _path) {
+		sf::RectangleShape shape;
+		shape.setSize(sf::Vector2f(cellWidth, cellHeight));
+		shape.setPosition(sf::Vector2f(_region.left + (float)node.x * cellWidth, _region.top + (float)node.y * cellHeight));
+		shape.setFillColor(sf::Color(0, 0, 255, 100));
+		target.draw(shape);
 	}
 }
