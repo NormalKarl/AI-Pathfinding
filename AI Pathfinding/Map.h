@@ -32,6 +32,10 @@ public:
 	inline sf::Vector2i getEnd() { return m_end; }
 	//Calculates a path using A*
 	std::vector<sf::Vector2i> getPath();
+	//Steps in any direction by any amount until a obstacle or the edge
+	//of the map has been reached. This function returns the steps before
+	//it hits an obstacle.
+	int stepCast(int x, int y, int strideX, int strideY);
 };
 
 #endif

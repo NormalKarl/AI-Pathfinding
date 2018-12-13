@@ -94,7 +94,6 @@ std::vector<sf::Vector2i> Map::getPath() {
 
 		if (currentNode->m_position == m_end) {
 			//Found the path.
-			printf("Found End.");
 			break;
 		}
 
@@ -169,4 +168,22 @@ std::vector<sf::Vector2i> Map::getPath() {
 	}
 
 	return std::vector<sf::Vector2i>();
+}
+
+int Map::stepCast(int x, int y, int strideX, int strideY) {
+	bool searching = true;
+	int stepCount = 0;
+
+	while (searching) {
+		if (x < 0 || y < 0 || x >= getWidth() || y >= getHeight() || m_mapData[x][y] == 1) {
+			searching = false;
+		}
+		else {
+			x += strideX;
+			y += strideY;
+			stepCount++;
+		}
+	}
+
+	return stepCount;
 }
