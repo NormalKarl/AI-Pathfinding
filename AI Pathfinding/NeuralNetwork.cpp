@@ -37,13 +37,11 @@ NeuralNetwork::NeuralNetwork(std::vector<int> _layerSizes) {
 	for (int& i : _layerSizes)
 		totalNodes += i;
 
+	//Init the biases.
 	m_biases = std::vector<float>(totalNodes);
-
-	for (float& bias : m_biases) {
-		bias = random(-2.5, 2.5);
-	}
-
-	//Initalise the signals
+	//Randomize the biases.
+	shuffleBiases();
+	//Initalise the signals.
 	m_signals = std::vector<float>(signalCount);
 
 }
@@ -108,7 +106,7 @@ std::vector<sf::Vector2i> NeuralNetwork::getPath(Map& _map, bool* _foundPath, fl
 	bool foundPath = false;
 
 	int iterations = 0;
-	int maxIterations = _map.getWidth() * _map.getHeight() * 10;
+	int maxIterations = _map.getWidth() * _map.getHeight() * 2;
 
 	sf::Vector2i currentPos = _map.getStart();
 
@@ -203,12 +201,11 @@ void NeuralNetwork::train(Map& _map) {
 	for (int gen = 0; gen < maxGenerations; gen++) {
 		generations++;
 
-		if (generations % 10 == 0)
-			printf("Generations: %i\n", generations);
 
 		std::vector<std::vector<float>> children;
 		fitnesses.clear();
 
+		#pragma omp for
 		for (int f = 0; f < POPULATION; f++) {
 			setSignals(chromosomes[f]);
 
@@ -216,8 +213,13 @@ void NeuralNetwork::train(Map& _map) {
 			bool validPath = false;
 
 			getPath(_map, &validPath, &fit);
-			fitnesses.push_back(fit);
 
+			#pragma omp critical
+			{
+				fitnesses.push_back(fit);
+			}
+
+			#pragma omp critical
 			if (validPath) {
 				foundPath = true;
 				gen = maxGenerations;
@@ -312,11 +314,19 @@ void NeuralNetwork::train(Map& _map) {
 		chromosomes = children;
 	}
 
+	printf("NeuralNetwork: Train | Generations: %i\n", generations);
+
 	if (foundPath) {
 		setSignals(fittest);
 		std::cout << "NeuralNetwork: Train | Sucessfully found a path." << std::endl;
 	}
 	else {
 		std::cout << "NeuralNetwork: Train | Could not find a path. Potentially bad luck. Push F3 to train again." << std::endl;
+	}
+}
+
+void NeuralNetwork::shuffleBiases() {
+	for (float& bias : m_biases) {
+		bias = random(-2.5, 2.5);
 	}
 }

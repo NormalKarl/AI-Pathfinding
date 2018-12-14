@@ -41,6 +41,8 @@ public:
 	//A fitness can also be parsed to calculate the fitness of the
 	//NeuralNetwork.
 	std::vector<sf::Vector2i> getPath(Map& _map, bool* _foundPath = nullptr, float* _fitness = nullptr);
+	//Randomize the biases in the network
+	void shuffleBiases();
 };
 
 #endif
