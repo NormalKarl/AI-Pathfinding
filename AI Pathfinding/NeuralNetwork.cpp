@@ -133,13 +133,13 @@ std::vector<sf::Vector2i> NeuralNetwork::getPath(Map& _map, bool* _foundPath, fl
 		bool left = positive(results[2]);
 		bool right = positive(results[3]);
 
-		//
+		//Check if the move can be made and make the move if possible.
 		if (up && currentPos.y > 0 && _map[currentPos.x][currentPos.y - 1] != 1) currentPos.y--;
 		else if (down && currentPos.y < _map.getHeight() - 1 && _map[currentPos.x][currentPos.y + 1] != 1) currentPos.y++;
 		if (left && currentPos.x > 0 && _map[currentPos.x - 1][currentPos.y] != 1) currentPos.x--;
 		else if (right && currentPos.x < _map.getWidth() - 1 && _map[currentPos.x + 1][currentPos.y] != 1) currentPos.x++;
 
-
+		//Get the last position and the last last position.
 		sf::Vector2i lastLastPos = path.size() >= 3 ? path[path.size() - 3] : path.size() >= 2 ? path[path.size() - 2] : path[path.size() - 1];
 		sf::Vector2i lastPos = path.size() >= 2 ? path[path.size() - 2] : path[path.size() - 1];
 
@@ -151,17 +151,21 @@ std::vector<sf::Vector2i> NeuralNetwork::getPath(Map& _map, bool* _foundPath, fl
 			}
 		}
 
+		//Check if the position has actually changed.
 		if (!containsNode && lastPos != currentPos) {
 			if (currentPos == lastLastPos) {
+				//The agent has moved back on themself to remove fitness.
 				fitness -= 1.0f;
 				path.pop_back();
 			}
 			else {
+				//The agent has moved to increment.
 				fitness += 1.0f;
 				path.push_back(currentPos);
 			}
 		}
 		else if (lastPos == currentPos) {
+			//Peanalise for staying in place.
 			fitness -= 0.1f;
 		}
 
@@ -171,12 +175,15 @@ std::vector<sf::Vector2i> NeuralNetwork::getPath(Map& _map, bool* _foundPath, fl
 			foundPath = true;
 	}
 
+	//Update found path variable.
 	if (foundPath && _foundPath != nullptr)
 		*_foundPath = foundPath;
 
+	//Update fitness variable.
 	if (_fitness != nullptr)
 		*_fitness = fitness < 0.0f ? 0.0f : fitness;
 
+	//If the path cannot be found clear the path.
 	if (!foundPath)
 		path.clear();
 
@@ -217,6 +224,7 @@ void NeuralNetwork::train(Map& _map) {
 			float fit = 0.0f;
 			bool validPath = false;
 
+			//Test path.
 			getPath(_map, &validPath, &fit);
 
 			#pragma omp critical
@@ -224,6 +232,8 @@ void NeuralNetwork::train(Map& _map) {
 				fitnesses.push_back(fit);
 			}
 
+			//If the path is found then set the fittest to the found chromosome
+			//and set found path.
 			#pragma omp critical
 			if (validPath) {
 				foundPath = true;
@@ -232,6 +242,7 @@ void NeuralNetwork::train(Map& _map) {
 			}
 		}
 
+		//Stop if a path is found or the max generations has been met.
 		if (foundPath || gen == maxGenerations) {
 			break;
 		}
@@ -246,6 +257,7 @@ void NeuralNetwork::train(Map& _map) {
 			float currentCheck = 0.0f;
 			int index1 = 0;
 
+			//Choose the first chromosome.
 			for (int f = 0; f < fitnesses.size(); f++) {
 				currentCheck += fitnesses[f];
 
@@ -257,6 +269,7 @@ void NeuralNetwork::train(Map& _map) {
 
 			int index2 = index1;
 
+			//Find the next chromosome.
 			while (index2 == index1) {
 				r1 = random(0.0f, maxVal);
 				currentCheck = 0.0f;
@@ -274,13 +287,15 @@ void NeuralNetwork::train(Map& _map) {
 			std::vector<float> chromosomeA = chromosomes[index1];
 			std::vector<float> chromosomeB = chromosomes[index2];
 
-			//int crossOver = (int)floor(chromosomeA.size() * random());
+			//Set the cross over at chromosome.
 			int crossOver = chromosomeA.size() / 2 - 1;
 
 			std::vector<float> childA;
 			std::vector<float> childB;
 
+			//Test if the chromosome needs to crossover.
 			if (random() < 0.7) {
+				//Cut the cell.
 				for (int cell = 0; cell < chromosomeA.size(); cell++) {
 					childA.push_back(cell <= crossOver ? chromosomeB[cell] : chromosomeA[cell]);
 				}
@@ -296,7 +311,9 @@ void NeuralNetwork::train(Map& _map) {
 				childA = chromosomeA;
 			}
 
+			//Test if the chromosome needs to crossover.
 			if (random() < 0.7) {
+				//Cut the cell.
 				for (int cell = 0; cell < chromosomeA.size(); cell++) {
 					childB.push_back(cell <= crossOver ? chromosomeA[cell] : chromosomeB[cell]);
 				}
@@ -316,6 +333,7 @@ void NeuralNetwork::train(Map& _map) {
 			children.push_back(childB);
 		}
 
+		//Set the new generation to the children.
 		chromosomes = children;
 	}
 
@@ -331,6 +349,7 @@ void NeuralNetwork::train(Map& _map) {
 }
 
 void NeuralNetwork::shuffleBiases() {
+	//Iterate over the biases and randomise them.
 	for (float& bias : m_biases) {
 		bias = random(-2.5, 2.5);
 	}

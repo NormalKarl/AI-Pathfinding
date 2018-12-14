@@ -20,6 +20,7 @@ int main() {
 	srand(time(NULL));
 
 	//Print instructions.
+	printf("FOCUS ON THE GAME WINDOW! Keys do not work otherwise.");
 	printf("Press [1] To load a map.\n");
 	printf("Press [2] To run the A* algorithm.\n");
 	printf("Press [3] To train the NeuralNetwork.\n");
@@ -116,6 +117,7 @@ int main() {
 		window.clear();
 
 		if (map != nullptr) {
+			//Calculate a region that i can display the grid.
 			sf::FloatRect region;
 
 			float sqSizeX = 0.0f;
@@ -150,6 +152,7 @@ int main() {
 			region.left = (size.x - sqSizeX) / 2;
 			region.top = (size.y - sqSizeY) / 2;
 
+			//Draw the grid.
 			drawGrid(window, *map, region, path);
 		}
 
@@ -161,6 +164,7 @@ void drawGrid(sf::RenderTarget& target, Map& map, sf::FloatRect _region, std::ve
 	float cellWidth = _region.width / (float)map.getWidth();
 	float cellHeight = _region.height / (float)map.getHeight();
 
+	//Draw the map data.
 	for (int x = 0; x < map.getWidth(); x++) {
 		for (int y = 0; y < map.getHeight(); y++) {
 			sf::RectangleShape shape;
@@ -186,6 +190,7 @@ void drawGrid(sf::RenderTarget& target, Map& map, sf::FloatRect _region, std::ve
 		}
 	}
 
+	//Draw grid lines.
 	for (int x = 0; x <= map.getWidth(); x++) {
 		sf::Vertex v[] = {
 			sf::Vertex({ _region.left + x * cellWidth, _region.top }),
@@ -204,6 +209,7 @@ void drawGrid(sf::RenderTarget& target, Map& map, sf::FloatRect _region, std::ve
 		target.draw(v, 2, sf::PrimitiveType::Lines);
 	}
 
+	//Draw the path.
 	for (sf::Vector2i node : _path) {
 		sf::RectangleShape shape;
 		shape.setSize(sf::Vector2f(cellWidth, cellHeight));
