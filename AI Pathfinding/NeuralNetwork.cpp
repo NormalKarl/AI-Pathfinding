@@ -98,6 +98,7 @@ std::vector<float> NeuralNetwork::run(std::vector<float> _inputNodes) {
 }
 
 std::vector<sf::Vector2i> NeuralNetwork::getPath(Map& _map, bool* _foundPath, float* _fitness) {
+	//Lambda function.
 	auto positive = [](float value) {
 		return value > 0.5f;
 	};
@@ -105,6 +106,7 @@ std::vector<sf::Vector2i> NeuralNetwork::getPath(Map& _map, bool* _foundPath, fl
 	float fitness = 1.0f;
 	bool foundPath = false;
 
+	//Calculate the max iterations based on the map size.
 	int iterations = 0;
 	int maxIterations = _map.getWidth() * _map.getHeight() * 2;
 
@@ -113,6 +115,7 @@ std::vector<sf::Vector2i> NeuralNetwork::getPath(Map& _map, bool* _foundPath, fl
 	std::vector<sf::Vector2i> path;
 	path.push_back(_map.getStart());
 
+	//Iterate until path is found or iterations hits max iterations.
 	while (!foundPath && iterations < maxIterations) {
 		//Update the relative position in the neural network.
 		float dx = static_cast<float>(currentPos.x - _map.getEnd().x);
@@ -122,6 +125,7 @@ std::vector<sf::Vector2i> NeuralNetwork::getPath(Map& _map, bool* _foundPath, fl
 		float dleft = static_cast<float>(_map.stepCast(currentPos.x, currentPos.y, -1, 0));
 		float dright = static_cast<float>(_map.stepCast(currentPos.x, currentPos.y, 1, 0));
 
+		//Parse the results into the neural network.
 		std::vector<float> results = run({ dx, dy, dup, ddown, dleft, dright });
 
 		bool up = positive(results[0]);
@@ -129,6 +133,7 @@ std::vector<sf::Vector2i> NeuralNetwork::getPath(Map& _map, bool* _foundPath, fl
 		bool left = positive(results[2]);
 		bool right = positive(results[3]);
 
+		//
 		if (up && currentPos.y > 0 && _map[currentPos.x][currentPos.y - 1] != 1) currentPos.y--;
 		else if (down && currentPos.y < _map.getHeight() - 1 && _map[currentPos.x][currentPos.y + 1] != 1) currentPos.y++;
 		if (left && currentPos.x > 0 && _map[currentPos.x - 1][currentPos.y] != 1) currentPos.x--;

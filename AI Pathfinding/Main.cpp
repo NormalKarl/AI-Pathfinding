@@ -19,6 +19,7 @@ void drawGrid(sf::RenderTarget& target, Map& map, sf::FloatRect _region, std::ve
 int main() {
 	srand(time(NULL));
 
+	//Print instructions.
 	printf("Press [1] To load a map.\n");
 	printf("Press [2] To run the A* algorithm.\n");
 	printf("Press [3] To train the NeuralNetwork.\n");
