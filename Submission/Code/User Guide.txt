@@ -1,0 +1,31 @@
+### Introduction ###
+The messages from the program will be displayed in the console and the
+map will be displayed in the main game window.
+
+### Controls ###
+To use the pathfinding program, start it up and use the following keys
+to find the paths:
+
+Press [1] To load a map.
+Press [2] To run the A* algorithm.
+Press [3] To train the NeuralNetwork.
+Press [4] To run the NeuralNetwork which produces a path.
+Press [5] To shuffle the biases in the NeuralNetwork (You will need to retrain [3]).
+
+### Loading a Map ###
+Before you can train or run the pathfinding algorithms you need to first
+load a map by pressing [1]. This will open an open file dialog box where
+you can select a file.
+
+### A* Pathfinding ###
+You can run the A* pathfinding method uby pressing 2.
+
+### Neural Network Training & Pathfinding ###
+To use the neural network you will need to load a map and then press 3 to
+train the network. Not doing this will produce a garbage path when you get
+the path. To run the path you need to press 4 and then the newly trained
+neural network will run and return a valid path (based on the training).
+Finally if no particular path could be found (meaning that the max iterations
+have been reached with no suitable path found) theny you can press 5 to
+randomise the biases and train again. Luck is a big component of this training
+method.

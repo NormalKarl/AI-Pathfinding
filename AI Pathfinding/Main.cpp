@@ -20,7 +20,7 @@ int main() {
 	srand(time(NULL));
 
 	//Print instructions.
-	printf("FOCUS ON THE GAME WINDOW! Keys do not work otherwise.");
+	printf("FOCUS ON THE GAME WINDOW! Keys do not work otherwise.\n");
 	printf("Press [1] To load a map.\n");
 	printf("Press [2] To run the A* algorithm.\n");
 	printf("Press [3] To train the NeuralNetwork.\n");

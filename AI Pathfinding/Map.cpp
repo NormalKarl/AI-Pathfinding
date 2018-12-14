@@ -186,3 +186,4 @@ int Map::stepCast(int x, int y, int strideX, int strideY) {
 	}
 
 	return stepCount;
+}
